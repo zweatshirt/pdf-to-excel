@@ -18,11 +18,12 @@ def main():
     # all rows
     for i in range(0, len(df_dict)):
         if i == 0:
-            print(cols[0] + "      " + cols[1] + "     " + cols[2])
-        employee = df_dict[i][cols[0]]
-        job = df_dict[i][cols[1]]
-        shift = df_dict[i][cols[2]]
-        print(employee, job, shift)
+            print(str.join('        ', (i for i in cols)))
+        else:
+            employee = df_dict[i][cols[0]]
+            job = df_dict[i][cols[1]]
+            shift = df_dict[i][cols[2]]
+            print(employee, job, shift)
 
 
 
