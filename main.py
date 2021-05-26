@@ -59,14 +59,13 @@ def emp_by_shift(df_dict, job):
                         shift_type = 'Days'
                 if job in j:
                     if 'CHG' in j:
-                        lst += (e, shift, shift_type, 'CHG')
+                        lst.append(tuple((e, shift, shift_type, 'CHG')))
                     else:
-                        lst += (e, shift, shift_type)
+                        lst.append(tuple((e, shift, shift_type)))
             except Exception:
                 # tb.print_exc()
                 # print("Error parsing: " + str(s))
                 continue
-
 
     return lst
 
