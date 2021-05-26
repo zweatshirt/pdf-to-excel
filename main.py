@@ -1,16 +1,21 @@
 from tabula import read_pdf as rp
 from pandas import DataFrame
+from pandas import option_context
 # from shutil import copy
 from openpyxl import Workbook
 from openpyxl import load_workbook
 import traceback as tb
 import time
 import pprint as pp
+from math import isnan
+from tabulate import tabulate
+from re import compile, DOTALL, MULTILINE
 
 
 verbose = True
 def main():
     df_dict = pdf_to_dict()
+    # print(df_dict)
 
     try:
         # Parse date from dict:
@@ -26,8 +31,9 @@ def main():
         rn_days, rn_mids, rn_nights = get_shift_type(rns)
         tech_days, tech_mids, tech_nights = get_shift_type(edts)
         sec_days, sec_mids, sec_nights = get_shift_type(us)
-
-
+        wb = load_workbook(filename='template.xlsx')
+        ws = wb.active
+        days_chg = input('Enter who you want to be the Days CHARGE:')
     except Exception:
         tb.print_exc()
         time.sleep(0.1)
@@ -81,10 +87,10 @@ def emp_by_shift(df_dict, job):
                     else:
                         shift_type = 'Days'
                 if job in j:
-                    if 'CHG' in j:
-                        lst.append(tuple((e, shift, shift_type, 'CHG')))
-                    else:
-                        lst.append(tuple((e, shift, shift_type)))
+                    lst.append(tuple((e, shift, shift_type)))
+                elif 'CHG' in j:
+                    lst.append(tuple((e, shift, shift_type, 'CHG')))
+
             except Exception:
                 # tb.print_exc()
                 # print("Error parsing: " + str(s))
@@ -127,22 +133,34 @@ def pdf_to_dict():
         try:
             pdf_name = str(input("Enter full path of the PDF to read: "))
             # Convert pdf info to DataFrame, then to dict
-            df = DataFrame(rp(pdf_name, pages='all')[0])
+            first_df = DataFrame(rp(pdf_name, pages='all')[0])
 
-            if verbose:
-                print(df)
-            # Essentially just a 0 thru n - 1 indexed dict, where n == num of keys
-            # Each key points to a row in the pdf
-            df_dict = df.to_dict('index')
+            def count_pages(file_path):
+                rxcountpages = compile(r"/Type\s*/Page([^s]|$)", MULTILINE | DOTALL)
+                with open(file_path, "rb") as temp_file:
+                    return len(rxcountpages.findall(str(temp_file.read())))
+
+            pdf_len = count_pages(pdf_name)
+            for pg in range(1, pdf_len):
+                df2 = DataFrame(rp(pdf_name, pages='all')[pg])
+                for i in range(0, len(df2)):
+                    df2.rename(index={i: i + len(first_df)}, inplace=True)
+                first_df = first_df.append(df2)
+
+            print(first_df)
+            print(tabulate(first_df, headers='keys', tablefmt='psql'))
+            # if verbose:
+            #     print(df, '\n')
+
+            df_dict = first_df.to_dict('index')
+
             break
         except Exception:
             tb.print_exc()
-
             print("Error parsing PDF, please try again.")
 
     return df_dict
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()
