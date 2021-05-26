@@ -4,24 +4,33 @@ from pandas import DataFrame
 from openpyxl import Workbook
 from openpyxl import load_workbook
 import traceback as tb
+import time
+import pprint as pp
 
 
+verbose = True
 def main():
     df_dict = pdf_to_dict()
 
     try:
         # Parse date from dict:
         d = date(df_dict)
-        print_pretty_dict(df_dict)
+        # print_pretty_dict(df_dict)
 
         # expensive and overkill but makes life easier
         # I did this to split emps by 'Days', 'Mid Shift', 'Nights'
         rns = emp_by_shift(df_dict, 'RN')
         edts = emp_by_shift(df_dict, 'EDT')
         us = emp_by_shift(df_dict, 'US')
-        print(edts)
+
+        rn_days, rn_mids, rn_nights = get_shift_type(rns)
+        tech_days, tech_mids, tech_nights = get_shift_type(edts)
+        sec_days, sec_mids, sec_nights = get_shift_type(us)
+
+
     except Exception:
         tb.print_exc()
+        time.sleep(0.1)
         print("Error in parsing data from dict")
 
     # Grab name to save new excel file as:
@@ -30,6 +39,20 @@ def main():
     # Create workbook from template:
     wb = load_workbook(filename='template.xlsx')
     ws = wb.active
+
+
+def get_shift_type(ppl):
+    days = []
+    mids = []
+    nights = []
+    for n in range(0, len(ppl)):
+        if ppl[n][2] == 'Days':
+            days += ppl[n]
+        elif ppl[n][2] == 'Mid Shift':
+            mids += ppl[n]
+        else:
+            nights += ppl[n]
+    return days, mids, nights
 
 
 # calling this over and over is a pretty expensive operation.
@@ -85,18 +108,18 @@ def date(d):
     return list(d[0].values())[2]
 
 
-def print_pretty_dict(df_dict):
-    assert isinstance(df_dict, dict)
-    cols = list(x for x in df_dict[0])
-    # all rows
-    for i in range(0, len(df_dict)):
-        if i == 0:
-            print(str.join('            ', (i for i in cols)))
-        else:
-            employee = df_dict[i][cols[0]]
-            job = df_dict[i][cols[1]]
-            shift = df_dict[i][cols[2]]
-            print(str.join('        ', [repr(employee), repr(job), repr(shift)]))
+# def print_pretty_dict(df_dict):
+#     assert isinstance(df_dict, dict)
+#     cols = list(x for x in df_dict[0])
+#     # all rows
+#     for i in range(0, len(df_dict)):
+#         if i == 0:
+#             print(str.join('            ', (i for i in cols)))
+#         else:
+#             employee = df_dict[i][cols[0]]
+#             job = df_dict[i][cols[1]]
+#             shift = df_dict[i][cols[2]]
+#             print(str.join('            ', [repr(employee), repr(job), repr(shift)]))
 
 
 def pdf_to_dict():
@@ -105,6 +128,9 @@ def pdf_to_dict():
             pdf_name = str(input("Enter full path of the PDF to read: "))
             # Convert pdf info to DataFrame, then to dict
             df = DataFrame(rp(pdf_name, pages='all')[0])
+
+            if verbose:
+                print(df)
             # Essentially just a 0 thru n - 1 indexed dict, where n == num of keys
             # Each key points to a row in the pdf
             df_dict = df.to_dict('index')
